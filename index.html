@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Анимация сборки ₽</title>
+<title>Символ ₽ с плавным свечением и сплавлением</title>
 <style>
 body, html {
   margin:0; padding:0;
@@ -25,7 +25,7 @@ canvas.height = window.innerHeight;
 const centerX = canvas.width/2;
 const centerY = canvas.height/2;
 
-// === Создаем временный canvas для контура символа ₽ ===
+// === Временный canvas для точного контура ₽ ===
 const tempCanvas = document.createElement('canvas');
 tempCanvas.width = canvas.width;
 tempCanvas.height = canvas.height;
@@ -37,7 +37,7 @@ tctx.textAlign = "center";
 tctx.textBaseline = "middle";
 tctx.fillText('₽', centerX, centerY);
 
-// Получаем точки по альфа-каналу
+// Получаем точки контура
 const imageData = tctx.getImageData(0,0,canvas.width,canvas.height).data;
 const points = [];
 for(let y=0; y<canvas.height; y+=6){
@@ -49,7 +49,7 @@ for(let y=0; y<canvas.height; y+=6){
   }
 }
 
-// === Частицы ===
+// === Частицы-монетки ===
 const particles = [];
 for(let i=0;i<points.length;i++){
   const p = points[i];
@@ -64,21 +64,20 @@ for(let i=0;i<points.length;i++){
   });
 }
 
-let phase = 0; // 0-сборка, 1-светящийся, 2-слияние
+let phase = 0; // 0-сборка, 1-свет и сплавление
 let glowAlpha = 0;
 
 function animate(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  let arrivedCount = 0;
-
   if(phase === 0){
+    let arrivedCount = 0;
     particles.forEach(p=>{
       const dx = p.targetX - p.x;
       const dy = p.targetY - p.y;
-      p.vx += dx*0.01; // плавнее
+      p.vx += dx*0.01; // плавное движение
       p.vy += dy*0.01;
-      p.vx *= 0.88;    // плавное затухание
+      p.vx *= 0.88;
       p.vy *= 0.88;
       p.x += p.vx;
       p.y += p.vy;
@@ -95,18 +94,22 @@ function animate(){
       ctx.fill();
     });
 
-    if(arrivedCount === particles.length){
-      phase = 1; // переход к свечению
-    }
+    if(arrivedCount === particles.length) phase = 1; // переходим к свечению и сплавлению
 
   } else if(phase === 1){
-    // свечения символа
-    glowAlpha += 0.02;
-    if(glowAlpha>0.8) phase = 2; // переходим к слиянию
+    glowAlpha += 0.02; // плавное усиление свечения
+    if(glowAlpha > 1) glowAlpha = 1;
 
+    // Сплавление: частицы постепенно "сжимаются" к центру своего target
+    particles.forEach(p=>{
+      p.x += (p.targetX - p.x)*0.05;
+      p.y += (p.targetY - p.y)*0.05;
+    });
+
+    // рисуем цельный символ с ярким свечением
     ctx.save();
-    ctx.shadowColor = `rgba(255,215,0,${glowAlpha})`;
-    ctx.shadowBlur = 20 + 20*Math.sin(glowAlpha*10);
+    ctx.shadowColor = `rgba(255,255,180,${glowAlpha})`;
+    ctx.shadowBlur = 40*glowAlpha;
     ctx.fillStyle = 'gold';
     ctx.font = `${fontSize}px Arial`;
     ctx.textAlign = "center";
@@ -114,7 +117,7 @@ function animate(){
     ctx.fillText('₽', centerX, centerY);
     ctx.restore();
 
-    // показываем частицы слегка
+    // остатки частиц ещё слегка видны для эффекта плавного сплавления
     particles.forEach(p=>{
       const grad = ctx.createRadialGradient(p.x,p.y,p.radius/4,p.x,p.y,p.radius);
       grad.addColorStop(0,'rgba(255,255,200,0.5)');
@@ -125,14 +128,6 @@ function animate(){
       ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
       ctx.fill();
     });
-
-  } else {
-    // финальный цельный символ
-    ctx.fillStyle = 'gold';
-    ctx.font = `${fontSize}px Arial`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText('₽', centerX, centerY);
   }
 
   requestAnimationFrame(animate);
