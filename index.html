@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Анимация символа ₽ из монеток</title>
+<title>Анимация ₽ с плавными монетками</title>
 <style>
 body, html {
   margin:0; padding:0;
@@ -25,27 +25,19 @@ canvas.height = window.innerHeight;
 const centerX = canvas.width/2;
 const centerY = canvas.height/2;
 
-// === Создаем Path2D для символа ₽ ===
-const textPath = new Path2D();
-const fontSize = Math.min(canvas.width, canvas.height)/2;
-ctx.font = `${fontSize}px Arial`;
-ctx.textAlign = "center";
-ctx.textBaseline = "middle";
-textPath.addPath(new Path2D(ctx.font), {});
-
-textPath.addPath(new Path2D(`M0,0`)); // пустой для инициализации
-
-// === Получаем точки по контуру символа ₽ ===
+// === Создаём символ ₽ на временном canvas для контура ===
 const tempCanvas = document.createElement('canvas');
 tempCanvas.width = canvas.width;
 tempCanvas.height = canvas.height;
 const tctx = tempCanvas.getContext('2d');
+
+const fontSize = Math.min(canvas.width, canvas.height)/2;
 tctx.font = `${fontSize}px Arial`;
 tctx.textAlign = "center";
 tctx.textBaseline = "middle";
 tctx.fillText('₽', centerX, centerY);
 
-// Получаем данные изображения
+// Получаем точки контура
 const imageData = tctx.getImageData(0,0,canvas.width,canvas.height).data;
 const points = [];
 for(let y=0; y<canvas.height; y+=6){
@@ -57,7 +49,7 @@ for(let y=0; y<canvas.height; y+=6){
   }
 }
 
-// === Частицы (монетки) ===
+// === Частицы ===
 const particles = [];
 for(let i=0;i<points.length;i++){
   const p = points[i];
@@ -66,36 +58,57 @@ for(let i=0;i<points.length;i++){
     y: Math.random()*canvas.height,
     targetX: p.x,
     targetY: p.y,
-    radius: Math.random()*4+2,
+    radius: Math.random()*3+2,
     vx:0,
     vy:0
   });
 }
 
+let allArrived = false;
+
 // === Анимация ===
 function animate(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  let arrivedCount = 0;
+
   particles.forEach(p=>{
-    // движение к цели с плавностью
+    // движение с плавностью
     const dx = p.targetX - p.x;
     const dy = p.targetY - p.y;
-    p.vx += dx*0.05;
-    p.vy += dy*0.05;
+    p.vx += dx*0.02; // меньше значение = плавнее движение
+    p.vy += dy*0.02;
     p.vx *= 0.85;
     p.vy *= 0.85;
     p.x += p.vx;
     p.y += p.vy;
 
+    // считаем достигшие точки
+    if(Math.abs(dx)<1 && Math.abs(dy)<1) arrivedCount++;
+
     // рисуем монетку
-    const grad = ctx.createRadialGradient(p.x,p.y,p.radius/4,p.x,p.y,p.radius);
-    grad.addColorStop(0,'rgba(255,255,200,1)');
-    grad.addColorStop(0.5,'rgba(255,215,0,0.9)');
-    grad.addColorStop(1,'rgba(255,165,0,0.6)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
-    ctx.fill();
+    if(!allArrived){
+      const grad = ctx.createRadialGradient(p.x,p.y,p.radius/4,p.x,p.y,p.radius);
+      grad.addColorStop(0,'rgba(255,255,200,1)');
+      grad.addColorStop(0.5,'rgba(255,215,0,0.9)');
+      grad.addColorStop(1,'rgba(255,165,0,0.6)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
+      ctx.fill();
+    }
   });
+
+  // если все достигли, показываем цельный символ
+  if(arrivedCount === particles.length) allArrived = true;
+  if(allArrived){
+    ctx.fillStyle = 'gold';
+    ctx.font = `${fontSize}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText('₽', centerX, centerY);
+  }
+
   requestAnimationFrame(animate);
 }
 
