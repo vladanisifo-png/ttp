@@ -1,18 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Анимация подбрасываемой монеты ₽</title>
+<style>
+body, html {
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background: linear-gradient(120deg,#111 0%,#222 100%);
+}
+canvas {
+  display:block;
+}
+</style>
+</head>
+<body>
+
 <canvas id="animationCanvas"></canvas>
+
 <script>
 const canvas = document.getElementById('animationCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const centerX = canvas.width/2;
-const centerY = canvas.height/2;
+const centerX = canvas.width / 2;
+const centerY = canvas.height / 2 + 50; // чуть ниже центра для видимости движения
 
 // Монета
 let coin = {
   x: centerX,
   y: centerY + 150,
-  vy: -20,
+  vy: -20,       // стартовая скорость вверх
   angle: 0,
   vAngle: 0.5,
   landed: false
@@ -22,18 +45,17 @@ let coin = {
 let handAlpha = 1;
 
 function drawHand(){
-  if(handAlpha <=0) return;
-
+  if(handAlpha <= 0) return;
   ctx.save();
   ctx.globalAlpha = handAlpha;
   ctx.translate(centerX, centerY+150);
   // предплечье
   ctx.fillStyle = '#d2a679';
-  ctx.fillRect(-10,0,20,-80);
+  ctx.fillRect(-10, 0, 20, -80);
   // кисть
   ctx.beginPath();
-  ctx.arc(0,-80,15,0,2*Math.PI);
-  ctx.fillStyle='#d2a679';
+  ctx.arc(0, -80, 15, 0, 2*Math.PI);
+  ctx.fillStyle = '#d2a679';
   ctx.fill();
   ctx.restore();
 }
@@ -75,17 +97,24 @@ function animate(){
       coin.landed = true;
     }
 
-    if(handAlpha>0) handAlpha -= 0.02;
+    if(handAlpha > 0) handAlpha -= 0.02;
   }
 
   drawCoin();
 
-  if(!coin.landed || handAlpha>0){
+  if(!coin.landed || handAlpha > 0){
     requestAnimationFrame(animate);
-  } else {
-    setTimeout(()=>{canvas.style.display='none';},1000);
   }
 }
 
-requestAnimationFrame(animate);
+animate();
+
+// Чтобы canvas занимал весь экран при ресайзе
+window.addEventListener('resize', ()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
 </script>
+
+</body>
+</html>
