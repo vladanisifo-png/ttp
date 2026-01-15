@@ -1,0 +1,91 @@
+<canvas id="animationCanvas"></canvas>
+<script>
+const canvas = document.getElementById('animationCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const centerX = canvas.width/2;
+const centerY = canvas.height/2;
+
+// Монета
+let coin = {
+  x: centerX,
+  y: centerY + 150,
+  vy: -20,
+  angle: 0,
+  vAngle: 0.5,
+  landed: false
+};
+
+// Рука
+let handAlpha = 1;
+
+function drawHand(){
+  if(handAlpha <=0) return;
+
+  ctx.save();
+  ctx.globalAlpha = handAlpha;
+  ctx.translate(centerX, centerY+150);
+  // предплечье
+  ctx.fillStyle = '#d2a679';
+  ctx.fillRect(-10,0,20,-80);
+  // кисть
+  ctx.beginPath();
+  ctx.arc(0,-80,15,0,2*Math.PI);
+  ctx.fillStyle='#d2a679';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawCoin(){
+  ctx.save();
+  ctx.translate(coin.x, coin.y);
+  ctx.rotate(coin.angle);
+  ctx.beginPath();
+  ctx.arc(0,0,30,0,2*Math.PI);
+  ctx.fillStyle='gold';
+  ctx.fill();
+  ctx.lineWidth=2;
+  ctx.strokeStyle='darkgoldenrod';
+  ctx.stroke();
+  ctx.fillStyle='black';
+  ctx.font='24px Arial';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText('₽',0,0);
+  ctx.restore();
+}
+
+function animate(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  drawHand();
+
+  if(!coin.landed){
+    coin.y += coin.vy;
+    coin.vy += 1; // гравитация
+    coin.angle += coin.vAngle;
+
+    if(coin.y >= centerY){
+      coin.y = centerY;
+      coin.vy = 0;
+      coin.vAngle = 0;
+      coin.angle = 0; // ровно на ребро
+      coin.landed = true;
+    }
+
+    if(handAlpha>0) handAlpha -= 0.02;
+  }
+
+  drawCoin();
+
+  if(!coin.landed || handAlpha>0){
+    requestAnimationFrame(animate);
+  } else {
+    setTimeout(()=>{canvas.style.display='none';},1000);
+  }
+}
+
+requestAnimationFrame(animate);
+</script>
