@@ -3,118 +3,103 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Анимация подбрасываемой монеты ₽</title>
+<title>Анимация символа ₽ из монеток</title>
 <style>
 body, html {
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
+  margin:0; padding:0;
+  width:100%; height:100%;
   overflow:hidden;
   background: linear-gradient(120deg,#111 0%,#222 100%);
 }
-canvas {
-  display:block;
-}
+canvas { display:block; }
 </style>
 </head>
 <body>
-
-<canvas id="animationCanvas"></canvas>
-
+<canvas id="canvas"></canvas>
 <script>
-const canvas = document.getElementById('animationCanvas');
+const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const centerX = canvas.width / 2;
-const centerY = canvas.height / 2 + 50; // чуть ниже центра для видимости движения
+const centerX = canvas.width/2;
+const centerY = canvas.height/2;
 
-// Монета
-let coin = {
-  x: centerX,
-  y: centerY + 150,
-  vy: -20,       // стартовая скорость вверх
-  angle: 0,
-  vAngle: 0.5,
-  landed: false
-};
+// === Создаем Path2D для символа ₽ ===
+const textPath = new Path2D();
+const fontSize = Math.min(canvas.width, canvas.height)/2;
+ctx.font = `${fontSize}px Arial`;
+ctx.textAlign = "center";
+ctx.textBaseline = "middle";
+textPath.addPath(new Path2D(ctx.font), {});
 
-// Рука
-let handAlpha = 1;
+textPath.addPath(new Path2D(`M0,0`)); // пустой для инициализации
 
-function drawHand(){
-  if(handAlpha <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = handAlpha;
-  ctx.translate(centerX, centerY+150);
-  // предплечье
-  ctx.fillStyle = '#d2a679';
-  ctx.fillRect(-10, 0, 20, -80);
-  // кисть
-  ctx.beginPath();
-  ctx.arc(0, -80, 15, 0, 2*Math.PI);
-  ctx.fillStyle = '#d2a679';
-  ctx.fill();
-  ctx.restore();
+// === Получаем точки по контуру символа ₽ ===
+const tempCanvas = document.createElement('canvas');
+tempCanvas.width = canvas.width;
+tempCanvas.height = canvas.height;
+const tctx = tempCanvas.getContext('2d');
+tctx.font = `${fontSize}px Arial`;
+tctx.textAlign = "center";
+tctx.textBaseline = "middle";
+tctx.fillText('₽', centerX, centerY);
+
+// Получаем данные изображения
+const imageData = tctx.getImageData(0,0,canvas.width,canvas.height).data;
+const points = [];
+for(let y=0; y<canvas.height; y+=6){
+  for(let x=0; x<canvas.width; x+=6){
+    const idx = (y*canvas.width + x)*4;
+    if(imageData[idx+3]>128){
+      points.push({x,y});
+    }
+  }
 }
 
-function drawCoin(){
-  ctx.save();
-  ctx.translate(coin.x, coin.y);
-  ctx.rotate(coin.angle);
-  ctx.beginPath();
-  ctx.arc(0,0,30,0,2*Math.PI);
-  ctx.fillStyle='gold';
-  ctx.fill();
-  ctx.lineWidth=2;
-  ctx.strokeStyle='darkgoldenrod';
-  ctx.stroke();
-  ctx.fillStyle='black';
-  ctx.font='24px Arial';
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
-  ctx.fillText('₽',0,0);
-  ctx.restore();
+// === Частицы (монетки) ===
+const particles = [];
+for(let i=0;i<points.length;i++){
+  const p = points[i];
+  particles.push({
+    x: Math.random()*canvas.width,
+    y: Math.random()*canvas.height,
+    targetX: p.x,
+    targetY: p.y,
+    radius: Math.random()*4+2,
+    vx:0,
+    vy:0
+  });
 }
 
+// === Анимация ===
 function animate(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles.forEach(p=>{
+    // движение к цели с плавностью
+    const dx = p.targetX - p.x;
+    const dy = p.targetY - p.y;
+    p.vx += dx*0.05;
+    p.vy += dy*0.05;
+    p.vx *= 0.85;
+    p.vy *= 0.85;
+    p.x += p.vx;
+    p.y += p.vy;
 
-  drawHand();
-
-  if(!coin.landed){
-    coin.y += coin.vy;
-    coin.vy += 1; // гравитация
-    coin.angle += coin.vAngle;
-
-    if(coin.y >= centerY){
-      coin.y = centerY;
-      coin.vy = 0;
-      coin.vAngle = 0;
-      coin.angle = 0; // ровно на ребро
-      coin.landed = true;
-    }
-
-    if(handAlpha > 0) handAlpha -= 0.02;
-  }
-
-  drawCoin();
-
-  if(!coin.landed || handAlpha > 0){
-    requestAnimationFrame(animate);
-  }
+    // рисуем монетку
+    const grad = ctx.createRadialGradient(p.x,p.y,p.radius/4,p.x,p.y,p.radius);
+    grad.addColorStop(0,'rgba(255,255,200,1)');
+    grad.addColorStop(0.5,'rgba(255,215,0,0.9)');
+    grad.addColorStop(1,'rgba(255,165,0,0.6)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
+    ctx.fill();
+  });
+  requestAnimationFrame(animate);
 }
 
 animate();
-
-// Чтобы canvas занимал весь экран при ресайзе
-window.addEventListener('resize', ()=>{
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-});
 </script>
-
 </body>
 </html>
